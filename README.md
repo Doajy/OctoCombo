@@ -16,9 +16,10 @@ not a live in-game capture)*
   including talent bonuses like Vigor
 - Movable and resizable — drag to reposition, drag the bottom-right handle
   to resize
-- Lockable (click-through) once you've got it positioned
-- Customizable pip color and label text color, with a preset palette or a
-  full custom color picker
+- Lockable (click-through) once you've got it positioned — the title bar
+  hides itself while locked, leaving just the pips and energy bar
+- Customizable pip color and energy number text color, with a preset
+  palette or a full custom color picker
 - Toggleable energy bar
 - Position, size, and color settings are saved per character
 
@@ -31,15 +32,13 @@ not a live in-game capture)*
 
 ## Slash commands
 
-`/octocombo` or the short `/oc` both work:
-
 | Command | Effect |
 |---|---|
-| `/oc lock` | Lock the frame in place (click-through) |
-| `/oc unlock` | Unlock the frame so you can drag it and reveal the resize handle |
-| `/oc reset` | Reset position, size, and colors back to defaults |
-| `/oc scale n` | Set the frame scale directly, e.g. `/oc scale 1.5` |
-| `/oc energy` | Toggle the energy bar on/off |
+| `/octocombo lock` | Lock the frame in place (click-through) |
+| `/octocombo unlock` | Unlock the frame so you can drag it and reveal the resize handle |
+| `/octocombo reset` | Reset position, size, and colors back to defaults |
+| `/octocombo scale n` | Set the frame scale directly, e.g. `/octocombo scale 1.5` |
+| `/octocombo energy` | Toggle the energy bar on/off |
 
 ## Options menu
 
@@ -48,7 +47,7 @@ the options menu:
 
 - Show/hide the energy bar
 - Combo point pip color (preset palette or custom color picker)
-- "Combo Points" label text color (preset palette or custom color picker)
+- Energy number text color (preset palette or custom color picker)
 - Lock frame
 
 ## Requirements

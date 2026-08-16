@@ -4,19 +4,20 @@
 	vanilla client (built and tested for Turtle WoW). Works for Rogues
 	and Feral Druids.
 
-	Slash commands (/octocombo or the short /oc both work):
-	  /oc lock    - lock the frame in place (click-through)
-	  /oc unlock  - unlock the frame so you can drag it and reveal the resize handle
-	  /oc reset   - reset the frame back to its default position, size, and colors
-	  /oc scale n - set the frame scale directly (e.g. /oc scale 1.5)
-	  /oc energy  - toggle the energy bar on/off
+	Slash commands:
+	  /octocombo lock    - lock the frame in place (click-through)
+	  /octocombo unlock  - unlock the frame so you can drag it and reveal the resize handle
+	  /octocombo reset   - reset the frame back to its default position, size, and colors
+	  /octocombo scale n - set the frame scale directly (e.g. /octocombo scale 1.5)
+	  /octocombo energy  - toggle the energy bar on/off
 
 	While unlocked, drag the small handle in the bottom-right corner to
 	resize the whole tracker, or click the small dot on the title bar
 	above the pips for an options menu: show/hide the energy bar, a
 	color palette for the combo point pips, a color palette for the
-	"Combo Points" label text, and locking the frame. Each color option
-	also offers a full custom color picker.
+	energy number text, and locking the frame. Each color option also
+	offers a full custom color picker. The title bar itself (with the
+	"Combo Points" label) is only shown while unlocked.
 ]]
 
 local NUM_PIPS = 5
@@ -36,9 +37,9 @@ local defaults = {
 	pipColorR = 0.85,
 	pipColorG = 0.15,
 	pipColorB = 0.1,
-	fontColorR = 1.0,
-	fontColorG = 0.82,
-	fontColorB = 0.0,
+	energyTextColorR = 1.0,
+	energyTextColorG = 0.82,
+	energyTextColorB = 0.0,
 }
 
 local function EnsureDB()
@@ -167,7 +168,7 @@ local PIP_COLOR_PRESETS = {
 	{ name = "White", r = 0.9, g = 0.9, b = 0.9 },
 }
 
-local FONT_COLOR_PRESETS = {
+local ENERGY_TEXT_COLOR_PRESETS = {
 	{ name = "Gold (Default)", r = 1.0, g = 0.82, b = 0.0 },
 	{ name = "White", r = 1.0, g = 1.0, b = 1.0 },
 	{ name = "Red", r = 0.9, g = 0.2, b = 0.15 },
@@ -245,27 +246,27 @@ local function OpenPipColorPicker()
 end
 
 -- ---------------------------------------------------------------------
--- Text color ("Combo Points" label, via the options menu). The energy
--- number stays plain white regardless, since it needs to stay readable
--- against the yellow energy bar it sits on top of.
+-- Energy text color (the current/max numbers on the energy bar), via the
+-- options menu. The "Combo Points" title stays a fixed gold and isn't
+-- customizable.
 -- ---------------------------------------------------------------------
 
-local function SetFontColor(r, g, b)
-	title:SetTextColor(r, g, b)
-	OctoComboDB.fontColorR = r
-	OctoComboDB.fontColorG = g
-	OctoComboDB.fontColorB = b
+local function SetEnergyTextColor(r, g, b)
+	energyText:SetTextColor(r, g, b)
+	OctoComboDB.energyTextColorR = r
+	OctoComboDB.energyTextColorG = g
+	OctoComboDB.energyTextColorB = b
 end
 
-local function OpenFontColorPicker()
-	local startR, startG, startB = OctoComboDB.fontColorR, OctoComboDB.fontColorG, OctoComboDB.fontColorB
+local function OpenEnergyTextColorPicker()
+	local startR, startG, startB = OctoComboDB.energyTextColorR, OctoComboDB.energyTextColorG, OctoComboDB.energyTextColorB
 
 	ColorPickerFrame.func = function()
 		local r, g, b = ColorPickerFrame:GetColorRGB()
-		SetFontColor(r, g, b)
+		SetEnergyTextColor(r, g, b)
 	end
 	ColorPickerFrame.cancelFunc = function()
-		SetFontColor(startR, startG, startB)
+		SetEnergyTextColor(startR, startG, startB)
 	end
 	ColorPickerFrame.hasOpacity = false
 
@@ -296,11 +297,13 @@ local function ApplyLockState()
 		dim:SetVertexColor(0, 0, 0, 0)
 		resizeGrip:Hide()
 		menuButton:Hide()
+		title:Hide()
 	else
 		frame:EnableMouse(true)
 		dim:SetVertexColor(0, 0, 0, 0.25)
 		resizeGrip:Show()
 		menuButton:Show()
+		title:Show()
 		menuIcon:SetVertexColor(0.2, 0.85, 0.2, 1) -- green = unlocked
 	end
 end
@@ -421,18 +424,26 @@ end)
 
 local optionsMenu = CreateFrame("Frame", "OctoComboOptionsMenu", UIParent, "UIDropDownMenuTemplate")
 local PIP_COLOR_SUBMENU = "OCTOCOMBO_PIP_COLOR_SUBMENU"
-local FONT_COLOR_SUBMENU = "OCTOCOMBO_FONT_COLOR_SUBMENU"
+local ENERGY_TEXT_COLOR_SUBMENU = "OCTOCOMBO_ENERGY_TEXT_COLOR_SUBMENU"
 
 -- shared by both color submenus below: lists the given presets plus a
--- "Custom Color..." entry that opens the given picker function
+-- "Custom Color..." entry that opens the given picker function. The
+-- preset is passed through Blizzard's own info.arg1 (read back as the
+-- button's own arg1 at click time) rather than a closure over the loop
+-- variable, since the dropdown button pool otherwise ended up calling
+-- these with a stale/nil preset.
+local function OnPresetColorClick(self, setColorFunc, preset)
+	setColorFunc(preset.r, preset.g, preset.b)
+end
+
 local function AddColorSubmenuButtons(level, presets, setColorFunc, openPickerFunc)
 	for _, preset in ipairs(presets) do
 		local info = {}
 		info.text = ColorText(preset.name, preset.r, preset.g, preset.b)
 		info.notCheckable = true
-		info.func = function()
-			setColorFunc(preset.r, preset.g, preset.b)
-		end
+		info.func = OnPresetColorClick
+		info.arg1 = setColorFunc
+		info.arg2 = preset
 		UIDropDownMenu_AddButton(info, level)
 	end
 
@@ -452,8 +463,8 @@ local function InitOptionsMenu()
 		return
 	end
 
-	if level == 2 and value == FONT_COLOR_SUBMENU then
-		AddColorSubmenuButtons(level, FONT_COLOR_PRESETS, SetFontColor, OpenFontColorPicker)
+	if level == 2 and value == ENERGY_TEXT_COLOR_SUBMENU then
+		AddColorSubmenuButtons(level, ENERGY_TEXT_COLOR_PRESETS, SetEnergyTextColor, OpenEnergyTextColorPicker)
 		return
 	end
 
@@ -481,10 +492,10 @@ local function InitOptionsMenu()
 	UIDropDownMenu_AddButton(info, level)
 
 	info = {}
-	info.text = "Text Color"
+	info.text = "Energy Text Color"
 	info.notCheckable = true
 	info.hasArrow = true
-	info.value = FONT_COLOR_SUBMENU
+	info.value = ENERGY_TEXT_COLOR_SUBMENU
 	UIDropDownMenu_AddButton(info, level)
 
 	info = {}
@@ -565,7 +576,7 @@ frame:SetScript("OnEvent", function()
 		ApplyLockState()
 		ApplyOptions()
 		SetPipColor(OctoComboDB.pipColorR, OctoComboDB.pipColorG, OctoComboDB.pipColorB)
-		SetFontColor(OctoComboDB.fontColorR, OctoComboDB.fontColorG, OctoComboDB.fontColorB)
+		SetEnergyTextColor(OctoComboDB.energyTextColorR, OctoComboDB.energyTextColorG, OctoComboDB.energyTextColorB)
 		lastEnergy, lastEnergyMax = -1, -1
 		UpdateEnergy()
 	elseif event == "PLAYER_ENTERING_WORLD" then
@@ -591,7 +602,6 @@ end)
 -- ---------------------------------------------------------------------
 
 SLASH_OCTOCOMBO1 = "/octocombo"
-SLASH_OCTOCOMBO2 = "/oc"
 SlashCmdList["OCTOCOMBO"] = function(msg)
 	msg = string.lower(msg or "")
 
@@ -610,7 +620,7 @@ SlashCmdList["OCTOCOMBO"] = function(msg)
 		OctoComboDB.scale = defaults.scale
 		LoadPosition()
 		SetPipColor(defaults.pipColorR, defaults.pipColorG, defaults.pipColorB)
-		SetFontColor(defaults.fontColorR, defaults.fontColorG, defaults.fontColorB)
+		SetEnergyTextColor(defaults.energyTextColorR, defaults.energyTextColorG, defaults.energyTextColorB)
 		DEFAULT_CHAT_FRAME:AddMessage("|cffffcc00OctoCombo:|r position, size, and colors reset.")
 	elseif msg == "energy" then
 		OctoComboDB.showEnergy = not OctoComboDB.showEnergy
