@@ -14,9 +14,10 @@ not a live in-game capture)*
   gold glow at 5/5 (finisher ready)
 - Energy bar with current/max text that reflects your true max energy,
   including talent bonuses like Vigor
-- The current/max numbers only show up while your resource actually is
-  energy (Rogues always; Feral Druids only in Cat Form) — the bar itself
-  stays visible either way
+- Only tracks and shows real numbers while your resource actually is
+  energy (Rogues always; Feral Druids only in Cat Form) — otherwise it
+  doesn't track mana/rage at all, it just sits as a solid, full bar in
+  the same color with no numbers
 - Movable and resizable — drag to reposition, drag the bottom-right handle
   to resize
 - Lockable (click-through) once you've got it positioned — the title bar

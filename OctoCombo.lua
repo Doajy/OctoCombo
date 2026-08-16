@@ -19,9 +19,10 @@
 	offers a full custom color picker. The title bar itself (with the
 	"Combo Points" label) is only shown while unlocked.
 
-	The current/max numbers on the energy bar only show up while your
-	resource actually is energy (Rogues always; Feral Druids only in Cat
-	Form) -- the bar itself stays visible either way.
+	The energy bar only tracks and shows real numbers while your resource
+	actually is energy (Rogues always; Feral Druids only in Cat Form).
+	Otherwise it doesn't track mana/rage at all -- it just sits there as a
+	solid, full bar in the same color, with no numbers.
 ]]
 
 local NUM_PIPS = 5
@@ -532,8 +533,13 @@ end)
 --
 -- Rogues are always on energy, but Feral Druids only use energy while
 -- shapeshifted into Cat Form (mana/rage otherwise). Checking the live
--- power type -- rather than class -- covers both cases for free and
--- keeps the number from ever mislabeling mana/rage as energy.
+-- power type -- rather than class -- covers both cases for free.
+--
+-- Outside that state (e.g. a Druid out of Cat Form, or any other class)
+-- this addon has nothing meaningful to show, so it doesn't track
+-- mana/rage at all: the bar just renders as a solid, full bar in the
+-- same energy-yellow color, with no numbers, rather than misrepresenting
+-- an unrelated resource.
 
 local POWER_TYPE_ENERGY = 3
 
@@ -542,8 +548,25 @@ local function IsEnergyResource()
 end
 
 local lastEnergy, lastEnergyMax = -1, -1
+local lastIsEnergyResource = nil
 
 local function UpdateEnergy()
+	local isEnergy = IsEnergyResource()
+
+	if not isEnergy then
+		if lastIsEnergyResource == false then
+			return
+		end
+		lastIsEnergyResource = false
+		lastEnergy, lastEnergyMax = -1, -1 -- force a real refresh when energy comes back
+
+		energyBar:SetMinMaxValues(0, 1)
+		energyBar:SetValue(1)
+		energyText:Hide()
+		return
+	end
+	lastIsEnergyResource = true
+
 	local cur = UnitMana("player") or 0
 	local max = UnitManaMax("player") or 0
 	if max <= 0 then max = 1 end
@@ -555,13 +578,8 @@ local function UpdateEnergy()
 
 	energyBar:SetMinMaxValues(0, max)
 	energyBar:SetValue(cur)
-
-	if IsEnergyResource() then
-		energyText:SetText(cur .. " / " .. max)
-		energyText:Show()
-	else
-		energyText:Hide()
-	end
+	energyText:SetText(cur .. " / " .. max)
+	energyText:Show()
 end
 
 frame:SetScript("OnUpdate", function()
