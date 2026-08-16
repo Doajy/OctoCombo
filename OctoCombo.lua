@@ -18,6 +18,10 @@
 	energy number text, and locking the frame. Each color option also
 	offers a full custom color picker. The title bar itself (with the
 	"Combo Points" label) is only shown while unlocked.
+
+	The current/max numbers on the energy bar only show up while your
+	resource actually is energy (Rogues always; Feral Druids only in Cat
+	Form) -- the bar itself stays visible either way.
 ]]
 
 local NUM_PIPS = 5
@@ -525,6 +529,17 @@ end)
 -- UnitManaMax("player") is the engine's live max-energy value, so it
 -- already includes any talent bonus (e.g. Vigor, +5/+10 max energy) the
 -- moment it's learned -- no manual talent detection needed here.
+--
+-- Rogues are always on energy, but Feral Druids only use energy while
+-- shapeshifted into Cat Form (mana/rage otherwise). Checking the live
+-- power type -- rather than class -- covers both cases for free and
+-- keeps the number from ever mislabeling mana/rage as energy.
+
+local POWER_TYPE_ENERGY = 3
+
+local function IsEnergyResource()
+	return UnitPowerType("player") == POWER_TYPE_ENERGY
+end
 
 local lastEnergy, lastEnergyMax = -1, -1
 
@@ -540,7 +555,13 @@ local function UpdateEnergy()
 
 	energyBar:SetMinMaxValues(0, max)
 	energyBar:SetValue(cur)
-	energyText:SetText(cur .. " / " .. max)
+
+	if IsEnergyResource() then
+		energyText:SetText(cur .. " / " .. max)
+		energyText:Show()
+	else
+		energyText:Hide()
+	end
 end
 
 frame:SetScript("OnUpdate", function()
@@ -568,6 +589,7 @@ frame:RegisterEvent("PLAYER_COMBO_POINTS")
 frame:RegisterEvent("UNIT_COMBO_POINTS")
 frame:RegisterEvent("UNIT_MANA")
 frame:RegisterEvent("UNIT_MAXMANA")
+frame:RegisterEvent("UNIT_DISPLAYPOWER")
 
 frame:SetScript("OnEvent", function()
 	if event == "VARIABLES_LOADED" then
@@ -594,6 +616,12 @@ frame:SetScript("OnEvent", function()
 			lastEnergy, lastEnergyMax = -1, -1
 			UpdateEnergy()
 		end
+	elseif event == "UNIT_DISPLAYPOWER" then
+		-- fires on shapeshifting (e.g. a Feral Druid entering/leaving Cat
+		-- Form), which changes whether the player's resource is energy;
+		-- arg1 isn't reliably "player" here, so just force a refresh
+		lastEnergy, lastEnergyMax = -1, -1
+		UpdateEnergy()
 	end
 end)
 
