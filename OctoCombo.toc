@@ -1,0 +1,11 @@
+## Interface: 11200
+## Title: OctoCombo
+## Notes: Simple movable combo point and energy display for Rogues and Feral Druids. Works on Turtle WoW (1.12).
+## Author: Doug
+## Version: 1.0
+## SavedVariables: OctoComboDB
+
+OctoCombo.lua
+
+# Note: ComboPoint.tga (the round pip texture) ships alongside these files
+# and is loaded automatically at runtime; it does not need to be listed here.
